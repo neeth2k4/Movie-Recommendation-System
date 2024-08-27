@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movie Recommendation System</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(to right, #141E30, #243B55);
+            color: #ffffff;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            color: #ffb600;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        input[type="text"] {
+            width: 60%;
+            padding: 15px;
+            margin: 20px 0;
+            box-sizing: border-box;
+            border-radius: 8px;
+            border: none;
+            font-size: 18px;
+            color: #333;
+            outline: none;
+        }
+
+        button {
+            padding: 15px 25px;
+            background-color: #ff7e5f;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 18px;
+            transition: background-color 0.3s ease;
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        button:hover {
+            background-color: #feb47b;
+        }
+
+        .result {
+            margin-top: 30px;
+            width: 60%;
+        }
+
+        .result h2 {
+            color: #ffb600;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .result ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        .result ul li {
+            background-color: #1e2a38;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s ease;
+        }
+
+        .result ul li:hover {
+            transform: translateY(-5px);
+        }
+
+        .result ul li h3 {
+            margin: 0;
+            color: #ffb600;
+        }
+
+        .result ul li p {
+            margin: 5px 0 0;
+            color: #dddddd;
+        }
+
+        .dropdown {
+            margin: 15px 0;
+            text-align: center;
+        }
+
+        .dropdown select {
+            padding: 10px;
+            font-size: 18px;
+            border-radius: 8px;
+            border: none;
+            outline: none;
+        }
+
+        footer {
+            margin-top: 50px;
+            color: #ccc;
+            font-size: 14px;
+            text-align: center;
+        }
+
+    </style>
+</head>
+
+<body>
+    <h1>Movie Recommendation System</h1>
+    <input type="text" id="movieTitle" placeholder="Enter movie title">
+    <button onclick="getRecommendations()">Get Recommendations</button>
+
+    <div class="dropdown">
+        <label for="genreFilter">Filter by Genre:</label>
+        <select id="genreFilter" onchange="filterByGenre()">
+            <option value="">All Genres</option>
+            <option value="Adventure">Adventure</option>
+            <option value="Comedy">Comedy</option>
+            <option value="Romance">Romance</option>
+            <option value="Fantasy">Fantasy</option>
+            <!-- Add more genres as needed -->
+        </select>
+    </div>
+
+    <div class="result" id="results"></div>
+
+    <footer>
+        &copy; 2024 Movie Recommendation System. All rights reserved.
+    </footer>
+
+    <script>
+        const moviesData = [
+            { movieId: 1, clean_title: "Toy Story", genres_list: "Adventure Comedy" },
+            { movieId: 2, clean_title: "Jumanji", genres_list: "Adventure Fantasy" },
+            { movieId: 3, clean_title: "Grumpier Old Men", genres_list: "Romance Comedy" },
+            // Add more movie data here as needed...
+        ];
+
+        function cleanTitle(title) {
+            return title.replace(/[^a-zA-Z0-9 ]/g, "");
+        }
+
+        function searchByTitle(title) {
+            title = cleanTitle(title).toLowerCase();
+            return moviesData.filter(movie => movie.clean_title.toLowerCase().includes(title));
+        }
+
+        function searchSimilarGenres(genres) {
+            return moviesData.filter(movie => movie.genres_list.toLowerCase().includes(genres.toLowerCase()));
+        }
+
+        function scoresCalculator(movieId) {
+            const similarUsers = moviesData.filter(movie => movie.movieId === movieId);
+            const similarUserRecs = similarUsers.reduce((acc, movie) => {
+                acc[movie.movieId] = (acc[movie.movieId] || 0) + 1;
+                return acc;
+            }, {});
+
+            const genresOfSelectedMovie = similarUsers[0].genres_list;
+            const moviesWithSimilarGenres = searchSimilarGenres(genresOfSelectedMovie);
+
+            moviesWithSimilarGenres.forEach(movie => {
+                if (similarUserRecs[movie.movieId]) {
+                    similarUserRecs[movie.movieId] *= 1.5;
+                }
+            });
+
+            return Object.entries(similarUserRecs)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 10)
+                .map(([movieId]) => moviesData.find(movie => movie.movieId == movieId));
+        }
+
+        function getRecommendations() {
+            const userInput = document.getElementById("movieTitle").value;
+            const titleCandidates = searchByTitle(userInput);
+
+            if (titleCandidates.length > 0) {
+                const movieId = titleCandidates[0].movieId;
+                const recommendations = scoresCalculator(movieId);
+
+                displayResults(recommendations);
+            } else {
+                alert("No movies found! Please try again.");
+            }
+        }
+
+        function displayResults(recommendations) {
+            const resultsContainer = document.getElementById("results");
+            resultsContainer.innerHTML = "<h2>Recommendations:</h2><ul>";
+
+            recommendations.forEach(rec => {
+                resultsContainer.innerHTML += `
+                    <li>
+                        <h3>${rec.clean_title}</h3>
+                        <p>Genres: ${rec.genres_list}</p>
+                    </li>
+                `;
+            });
+
+            resultsContainer.innerHTML += "</ul>";
+        }
+
+        function filterByGenre() {
+            const selectedGenre = document.getElementById("genreFilter").value.toLowerCase();
+            let filteredMovies = moviesData;
+
+            if (selectedGenre) {
+                filteredMovies = moviesData.filter(movie =>
+                    movie.genres_list.toLowerCase().includes(selectedGenre)
+                );
+            }
+
+            displayResults(filteredMovies);
+        }
+    </script>
+</body>
+
+</html>
